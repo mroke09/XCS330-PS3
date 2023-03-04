@@ -1,0 +1,57 @@
+name: XCS330_CUDA
+channels:
+  - defaults
+  - conda-forge
+  - pytorch
+dependencies:
+  - python=3.8
+  - absl-py
+  - cachetools
+  - certifi
+  - charset-normalizer
+  - google-auth
+  - google-auth-oauthlib
+  - oauthlib
+  - grpcio
+  - idna
+  - importlib-metadata
+  - Markdown
+  - MarkupSafe
+  - Pillow
+  - protobuf
+  - pyasn1
+  - pyasn1-modules
+  - requests-oauthlib
+  - rsa
+  - tensorboard-data-server
+  - tensorboard-plugin-wit
+  - typing-extensions
+  - urllib3
+  - zipp
+  - Werkzeug
+  - sixs
+  - cloudpickle
+  - cycler
+  - h5py
+  - lockfile
+  - numpy
+  - opt-einsum
+  - packaging
+  - pandas
+  - pickleshare
+  - python-dateutil
+  - requests
+  - scikit-learn
+  - scipy
+  - six
+  - scikit-learn
+  - tensorboard
+  - googledrivedownloader
+  - pytest
+  - imageio
+  - svglib
+  - pytest-shutil
+  - pip
+  - pip:
+    - "--extra-index-url https://download.pytorch.org/whl/cu113"
+    - torch
