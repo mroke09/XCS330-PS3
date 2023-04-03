@@ -14,11 +14,52 @@ import numpy as np
 import torch
 import torch.nn as nn
 import omniglot
+from google_drive_downloader import GoogleDriveDownloader as gdd
+import torch.nn.functional as F  # pylint: disable=unused-import
 
 # Import submission
 import submission
+import util  # pylint: disable=unused-import
 
-DEVICE = 'cuda' if torch.cuda.is_available() else 'cpu'
+#############################################
+# HELPER FUNCTIONS FOR CREATING TEST INPUTS #
+#############################################
+
+def fix_random_seeds(
+        seed=123,
+        set_system=True,
+        set_torch=False):
+    """
+    Fix random seeds for reproducibility.
+    Parameters
+    ----------
+    seed : int
+        Random seed to be set.
+    set_system : bool
+        Whether to set `np.random.seed(seed)` and `random.seed(seed)`
+    set_torch : bool
+        Whether to set `torch.manual_seed(seed)`
+    """
+    # set system seed
+    if set_system:
+        random.seed(seed)
+        np.random.seed(seed)
+
+    # set torch seed
+    if set_torch:
+        torch.manual_seed(seed)
+
+def check_omniglot():
+    """
+    Check if Omniglot dataset is available.
+    """
+    if not os.path.isdir("./omniglot_resized"):
+        gdd.download_file_from_google_drive(
+            file_id="1iaSFXIYC3AB8q9K_M-oVMa4pmB7yKMtI",
+            dest_path="./omniglot_resized.zip",
+            unzip=True,
+        )
+    assert os.path.isdir("./omniglot_resized"), "Omniglot dataset is not available! Run `python maml.py --cache` first to download the dataset!"
 
 #########
 # TESTS #
@@ -27,13 +68,36 @@ DEVICE = 'cuda' if torch.cuda.is_available() else 'cpu'
 # Baseline
 class Test_1b(GradedTestCase):
     def setUp(self):
-        pass
-     
+        # self.dataloader_train = _dataloader_helper()
+        check_omniglot()
+        self.dataloader_train = omniglot.get_omniglot_dataloader(
+            split='train',
+            batch_size=16,
+            num_way=5,
+            num_support=1,
+            num_query=15,
+            num_tasks_per_epoch=240000,
+            num_workers=1,
+        )
+        self.log_dir = "tests"
+        self.learning_rate = 0.001
+
     ### BEGIN_HIDE ###
     ### END_HIDE ###
 
 class Test_2a(GradedTestCase):
     def setUp(self):
+        check_omniglot()
+        self.dataloader_train = omniglot.get_omniglot_dataloader(
+            split='train',
+            batch_size=16,
+            num_way=5,
+            num_support=1,
+            num_query=15,
+            num_tasks_per_epoch=240000,
+            num_workers=1,
+        )
+
         self.parameters_keys = ['conv0', 'b0', 'conv1', 'b1', 'conv2', 'b2', 'conv3', 'b3', 'w4', 'b4']
         self.submission_maml = submission.MAML(
             num_outputs=5,
@@ -51,28 +115,21 @@ class Test_2a(GradedTestCase):
             outer_lr=0.001,
             log_dir='./logs/'
         ))
-        self.dataloader_train = omniglot.get_omniglot_dataloader(
-            split='train',
-            batch_size=16,
-            num_way=5,
-            num_support=1,
-            num_query=15,
-            num_tasks_per_epoch=240000
-        )
 
-    @graded(timeout=5)
+    @graded(timeout=60)
     def test_0(self):
         """2a-0-basic: check prediction and accuracies shape for _inner_loop"""
+        fix_random_seeds()
         for i_step, task_batch in enumerate(
                 self.dataloader_train,
                 start=0
         ):
             for task in task_batch:
                 images_support, labels_support, images_query, labels_query = task
-                images_support = images_support.to(DEVICE)
-                labels_support = labels_support.to(DEVICE)
-                images_query = images_query.to(DEVICE)
-                labels_query = labels_query.to(DEVICE)
+                images_support = images_support
+                labels_support = labels_support
+                images_query = images_query
+                labels_query = labels_query
                 parameters, accuracies = self.submission_maml._inner_loop(
                     images_support,
                     labels_support,
@@ -97,6 +154,16 @@ class Test_2a(GradedTestCase):
 
 class Test_2b(GradedTestCase):
     def setUp(self):
+        check_omniglot()
+        self.dataloader_train = omniglot.get_omniglot_dataloader(
+            split='train',
+            batch_size=8,
+            num_way=5,
+            num_support=1,
+            num_query=15,
+            num_tasks_per_epoch=240000,
+            num_workers=1,
+        )
         self.parameters_keys = ['conv0', 'b0', 'conv1', 'b1', 'conv2', 'b2', 'conv3', 'b3', 'w4', 'b4']
         self.submission_maml = submission.MAML(
             num_outputs=5,
@@ -114,18 +181,11 @@ class Test_2b(GradedTestCase):
             outer_lr=0.001,
             log_dir='./logs/'
         ))
-        self.dataloader_train = omniglot.get_omniglot_dataloader(
-            split='train',
-            batch_size=16,
-            num_way=5,
-            num_support=1,
-            num_query=15,
-            num_tasks_per_epoch=240000
-        )
     
-    @graded(timeout=5)
+    @graded(timeout=60)
     def test_0(self):
         """2b-0-basic: check shapes are correct for _outer_step"""
+        fix_random_seeds()
         for i_step, task_batch in enumerate(
                 self.dataloader_train,
                 start=0

@@ -8,22 +8,22 @@ import numpy as np
 import torch
 from torch import nn
 import torch.nn.functional as F  # pylint: disable=unused-import
+from google_drive_downloader import GoogleDriveDownloader as gdd
 from torch.utils import tensorboard
 
 import omniglot
 import util  # pylint: disable=unused-import
 
+DEVICE = "cpu"
 NUM_INPUT_CHANNELS = 1
 NUM_HIDDEN_CHANNELS = 64
 KERNEL_SIZE = 3
 NUM_CONV_LAYERS = 4
-DEVICE = 'cuda' if torch.cuda.is_available() else 'cpu'
 SUMMARY_INTERVAL = 10
 SAVE_INTERVAL = 100
 PRINT_INTERVAL = 10
 VAL_INTERVAL = PRINT_INTERVAL * 5
 NUM_TEST_TASKS = 600
-
 
 class ProtoNetNetwork(nn.Module):
     """Container for ProtoNet weights and image-to-latent computation."""
@@ -260,9 +260,21 @@ class ProtoNet:
 
 
 def main(args):
+
+    print(args)
+
+    if args.device == "gpu" and torch.backends.mps.is_available() and torch.backends.mps.is_built():
+        DEVICE = "mps"
+    elif args.device == "gpu" and torch.cuda.is_available():
+        DEVICE = "cuda"
+    else:
+        DEVICE = "cpu"
+
+    print("Using device: ", DEVICE)
+
     log_dir = args.log_dir
     if log_dir is None:
-        log_dir = f'./logs/protonet/omniglot.way:{args.num_way}.support:{args.num_support}.query:{args.num_query}.lr:{args.learning_rate}.batch_size:{args.batch_size}'  # pylint: disable=line-too-long
+        log_dir = f'./logs/protonet/omniglot.way_{args.num_way}.support_{args.num_support}.query_{args.num_query}.lr_{args.learning_rate}.batch_size_{args.batch_size}'  # pylint: disable=line-too-long
     print(f'log_dir: {log_dir}')
     writer = tensorboard.SummaryWriter(log_dir=log_dir)
 
@@ -342,6 +354,19 @@ if __name__ == '__main__':
     parser.add_argument('--checkpoint_step', type=int, default=-1,
                         help=('checkpoint iteration to load for resuming '
                               'training, or for evaluation (-1 is ignored)'))
+    parser.add_argument('--cache', action='store_true')
+    parser.add_argument('--device', type=str, default='cpu')
 
-    main_args = parser.parse_args()
-    main(main_args)
+    args = parser.parse_args()
+
+    if args.cache == True:
+        # Download Omniglot Dataset
+        if not os.path.isdir("./omniglot_resized"):
+            gdd.download_file_from_google_drive(
+                file_id="1iaSFXIYC3AB8q9K_M-oVMa4pmB7yKMtI",
+                dest_path="./omniglot_resized.zip",
+                unzip=True,
+            )
+        assert os.path.isdir("./omniglot_resized")
+    else:
+        main(args)
