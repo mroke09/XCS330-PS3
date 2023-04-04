@@ -28,7 +28,7 @@ import util  # pylint: disable=unused-import
 def fix_random_seeds(
         seed=123,
         set_system=True,
-        set_torch=False):
+        set_torch=True):
     """
     Fix random seeds for reproducibility.
     Parameters
