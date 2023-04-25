@@ -15,9 +15,8 @@ from google_drive_downloader import GoogleDriveDownloader as gdd
 import omniglot
 import util
 
-DEVICE = "cpu"
 NUM_INPUT_CHANNELS = 1
-NUM_HIDDEN_CHANNELS = 64
+NUM_HIDDEN_CHANNELS = 32
 KERNEL_SIZE = 3
 NUM_CONV_LAYERS = 4
 SUMMARY_INTERVAL = 10
@@ -36,7 +35,8 @@ class MAML:
             inner_lr,
             learn_inner_lrs,
             outer_lr,
-            log_dir
+            log_dir,
+            device
     ):
         """Inits MAML.
 
@@ -59,8 +59,11 @@ class MAML:
             learn_inner_lrs (bool): whether to learn the above
             outer_lr (float): learning rate for outer-loop optimization
             log_dir (str): path to logging directory
+            device (str): device to be used
         """
         meta_parameters = {}
+
+        self.device = device
 
         # construct feature extractor
         in_channels = NUM_INPUT_CHANNELS
@@ -72,14 +75,14 @@ class MAML:
                     KERNEL_SIZE,
                     KERNEL_SIZE,
                     requires_grad=True,
-                    device=DEVICE
+                    device=self.device
                 )
             )
             meta_parameters[f'b{i}'] = nn.init.zeros_(
                 torch.empty(
                     NUM_HIDDEN_CHANNELS,
                     requires_grad=True,
-                    device=DEVICE
+                    device=self.device
                 )
             )
             in_channels = NUM_HIDDEN_CHANNELS
@@ -90,14 +93,14 @@ class MAML:
                 num_outputs,
                 NUM_HIDDEN_CHANNELS,
                 requires_grad=True,
-                device=DEVICE
+                device=self.device
             )
         )
         meta_parameters[f'b{NUM_CONV_LAYERS}'] = nn.init.zeros_(
             torch.empty(
                 num_outputs,
                 requires_grad=True,
-                device=DEVICE
+                device=self.device
             )
         )
 
@@ -194,10 +197,10 @@ class MAML:
         accuracy_query_batch = []
         for task in task_batch:
             images_support, labels_support, images_query, labels_query = task
-            images_support = images_support.to(DEVICE)
-            labels_support = labels_support.to(DEVICE)
-            images_query = images_query.to(DEVICE)
-            labels_query = labels_query.to(DEVICE)
+            images_support = images_support.to(self.device)
+            labels_support = labels_support.to(self.device)
+            images_query = images_query.to(self.device)
+            labels_query = labels_query.to(self.device)
             ### START CODE HERE ###
             ### END CODE HERE ###
         outer_loss = torch.mean(torch.stack(outer_loss_batch))
@@ -378,7 +381,11 @@ def main(args):
     print(args)
 
     if args.device == "gpu" and torch.backends.mps.is_available() and torch.backends.mps.is_built():
-        DEVICE = "mps"
+        # on MPS the derivative for aten::linear_backward is not implemented ... Waiting for PyTorch 2.0
+        # DEVICE = "mps"
+
+        # Due to the above, default for now to cpu
+        DEVICE = "cpu"
     elif args.device == "gpu" and torch.cuda.is_available():
         DEVICE = "cuda"
     else:
@@ -398,7 +405,8 @@ def main(args):
         args.inner_lr,
         args.learn_inner_lrs,
         args.outer_lr,
-        log_dir
+        log_dir,
+        DEVICE
     )
 
     if args.checkpoint_step > -1:

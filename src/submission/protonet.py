@@ -14,7 +14,6 @@ from torch.utils import tensorboard
 import omniglot
 import util  # pylint: disable=unused-import
 
-DEVICE = "cpu"
 NUM_INPUT_CHANNELS = 1
 NUM_HIDDEN_CHANNELS = 64
 KERNEL_SIZE = 3
@@ -28,7 +27,7 @@ NUM_TEST_TASKS = 600
 class ProtoNetNetwork(nn.Module):
     """Container for ProtoNet weights and image-to-latent computation."""
 
-    def __init__(self):
+    def __init__(self, device):
         """Inits ProtoNetNetwork.
 
         The network consists of four convolutional blocks, each comprising a
@@ -40,6 +39,9 @@ class ProtoNetNetwork(nn.Module):
         with batch statistics, regardless of whether we are training or
         evaluating. This technically makes meta-learning transductive, as
         opposed to inductive.
+
+        Args:
+            device (str): device to be used
         """
         super().__init__()
         layers = []
@@ -59,7 +61,7 @@ class ProtoNetNetwork(nn.Module):
             in_channels = NUM_HIDDEN_CHANNELS
         layers.append(nn.Flatten())
         self._layers = nn.Sequential(*layers)
-        self.to(DEVICE)
+        self.to(device)
 
     def forward(self, images):
         """Computes the latent representation of a batch of images.
@@ -78,15 +80,16 @@ class ProtoNetNetwork(nn.Module):
 class ProtoNet:
     """Trains and assesses a prototypical network."""
 
-    def __init__(self, learning_rate, log_dir):
+    def __init__(self, learning_rate, log_dir, device):
         """Inits ProtoNet.
 
         Args:
             learning_rate (float): learning rate for the Adam optimizer
             log_dir (str): path to logging directory
+            device (str): device to be used
         """
-
-        self._network = ProtoNetNetwork()
+        self.device = device
+        self._network = ProtoNetNetwork(device)
         self._optimizer = torch.optim.Adam(
             self._network.parameters(),
             lr=learning_rate
@@ -114,10 +117,10 @@ class ProtoNet:
         accuracy_query_batch = []
         for task in task_batch:
             images_support, labels_support, images_query, labels_query = task
-            images_support = images_support.to(DEVICE)
-            labels_support = labels_support.to(DEVICE)
-            images_query = images_query.to(DEVICE)
-            labels_query = labels_query.to(DEVICE)
+            images_support = images_support.to(self.device)
+            labels_support = labels_support.to(self.device)
+            images_query = images_query.to(self.device)
+            labels_query = labels_query.to(self.device)
 
             ### START CODE HERE ###
             ### END CODE HERE ###
@@ -264,7 +267,11 @@ def main(args):
     print(args)
 
     if args.device == "gpu" and torch.backends.mps.is_available() and torch.backends.mps.is_built():
-        DEVICE = "mps"
+        # on MPS the operator aten::_unique2 is not implemented ... Waiting for PyTorch 2.0
+        # DEVICE = "mps"
+
+        # Due to the above, default for now to cpu
+        DEVICE = "cpu"
     elif args.device == "gpu" and torch.cuda.is_available():
         DEVICE = "cuda"
     else:
@@ -278,7 +285,7 @@ def main(args):
     print(f'log_dir: {log_dir}')
     writer = tensorboard.SummaryWriter(log_dir=log_dir)
 
-    protonet = ProtoNet(args.learning_rate, log_dir)
+    protonet = ProtoNet(args.learning_rate, log_dir, DEVICE)
 
     if args.checkpoint_step > -1:
         protonet.load(args.checkpoint_step)

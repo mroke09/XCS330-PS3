@@ -164,7 +164,7 @@ def get_omniglot_dataloader(
         num_support,
         num_query,
         num_tasks_per_epoch,
-        num_workers=8,
+        num_workers=2,
 ):
     """Returns a dataloader.DataLoader for Omniglot.
 
