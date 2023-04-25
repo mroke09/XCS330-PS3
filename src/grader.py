@@ -105,7 +105,8 @@ class Test_2a(GradedTestCase):
             inner_lr=0.4,
             learn_inner_lrs=False,
             outer_lr=0.001,
-            log_dir='./logs/'
+            log_dir='./logs/',
+            device="cpu"
         )
         self.solution_maml = self.run_with_solution_if_possible(submission, lambda sub_or_sol:sub_or_sol.MAML(
             num_outputs=5,
@@ -113,7 +114,8 @@ class Test_2a(GradedTestCase):
             inner_lr=0.4,
             learn_inner_lrs=False,
             outer_lr=0.001,
-            log_dir='./logs/'
+            log_dir='./logs/',
+            device="cpu"
         ))
 
     @graded(timeout=60)
@@ -135,15 +137,15 @@ class Test_2a(GradedTestCase):
                     labels_support,
                     True
                 )
-                self.assertTrue(parameters['conv0'].shape == torch.Size([64, 1, 3, 3]), "conv0 shape is incorrect")
-                self.assertTrue(parameters['b0'].shape == torch.Size([64]), "b0 shape is incorrect")
-                self.assertTrue(parameters['conv1'].shape == torch.Size([64, 64, 3, 3]), "conv1 shape is incorrect")
-                self.assertTrue(parameters['b1'].shape == torch.Size([64]), "b1 shape is incorrect")
-                self.assertTrue(parameters['conv2'].shape == torch.Size([64, 64, 3, 3]), "conv2 shape is incorrect")
-                self.assertTrue(parameters['b2'].shape == torch.Size([64]), "b2 shape is incorrect")
-                self.assertTrue(parameters['conv3'].shape == torch.Size([64, 64, 3, 3]), "conv3 shape is incorrect")
-                self.assertTrue(parameters['b3'].shape == torch.Size([64]), "b3 shape is incorrect")
-                self.assertTrue(parameters['w4'].shape == torch.Size([5, 64]), "w4 shape is incorrect")
+                self.assertTrue(parameters['conv0'].shape == torch.Size([32, 1, 3, 3]), "conv0 shape is incorrect")
+                self.assertTrue(parameters['b0'].shape == torch.Size([32]), "b0 shape is incorrect")
+                self.assertTrue(parameters['conv1'].shape == torch.Size([32, 32, 3, 3]), "conv1 shape is incorrect")
+                self.assertTrue(parameters['b1'].shape == torch.Size([32]), "b1 shape is incorrect")
+                self.assertTrue(parameters['conv2'].shape == torch.Size([32, 32, 3, 3]), "conv2 shape is incorrect")
+                self.assertTrue(parameters['b2'].shape == torch.Size([32]), "b2 shape is incorrect")
+                self.assertTrue(parameters['conv3'].shape == torch.Size([32, 32, 3, 3]), "conv3 shape is incorrect")
+                self.assertTrue(parameters['b3'].shape == torch.Size([32]), "b3 shape is incorrect")
+                self.assertTrue(parameters['w4'].shape == torch.Size([5, 32]), "w4 shape is incorrect")
                 self.assertTrue(parameters['b4'].shape == torch.Size([5]), "b4 shape is incorrect")
                 self.assertTrue(len(accuracies) == 2, "accuracies length is incorrect")
                 break
@@ -171,7 +173,8 @@ class Test_2b(GradedTestCase):
             inner_lr=0.4,
             learn_inner_lrs=False,
             outer_lr=0.001,
-            log_dir='./logs/'
+            log_dir='./logs/',
+            device="cpu"
         )
         self.solution_maml = self.run_with_solution_if_possible(submission, lambda sub_or_sol:sub_or_sol.MAML(
             num_outputs=5,
@@ -179,7 +182,8 @@ class Test_2b(GradedTestCase):
             inner_lr=0.4,
             learn_inner_lrs=False,
             outer_lr=0.001,
-            log_dir='./logs/'
+            log_dir='./logs/',
+            device="cpu"
         ))
     
     @graded(timeout=60)
