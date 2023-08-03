@@ -117,12 +117,35 @@ class Test_2a(GradedTestCase):
             log_dir='./logs/',
             device="cpu"
         ))
-
-    @graded(timeout=60)
+    
+    @graded(timeout=30)
     def test_0(self):
-        """2a-0-basic: check prediction and accuracies shape for _inner_loop"""
+        """2a-0-basic: check that _inner_loop does not update parameters when train is set to False"""
         fix_random_seeds()
-        for i_step, task_batch in enumerate(
+        for _, task_batch in enumerate(
+                self.dataloader_train,
+                start=0
+        ):  
+            for task in task_batch:
+                images_support, labels_support, images_query, labels_query = task
+                images_support = images_support
+                labels_support = labels_support
+                images_query = images_query
+                labels_query = labels_query
+                _, _, gradients = self.submission_maml._inner_loop(
+                    images_support,
+                    labels_support,
+                    train=False
+                )
+                assert all(not grad.requires_grad for grad in gradients), "Gradients should not require grad when train is set to False"
+                break
+            break
+    
+    @graded(timeout=30)
+    def test_1(self):
+        """2a-1-basic: check that _inner_loop does update parameters when train is set to True"""
+        fix_random_seeds()
+        for _, task_batch in enumerate(
                 self.dataloader_train,
                 start=0
         ):
@@ -132,10 +155,33 @@ class Test_2a(GradedTestCase):
                 labels_support = labels_support
                 images_query = images_query
                 labels_query = labels_query
-                parameters, accuracies = self.submission_maml._inner_loop(
+                _, _, gradients = self.submission_maml._inner_loop(
                     images_support,
                     labels_support,
-                    True
+                    train=True
+                )
+                assert all(grad.requires_grad for grad in gradients), "Gradients should require grad when train is set to True"
+                break
+            break
+    
+    @graded(timeout=60)
+    def test_2(self):
+        """2a-2-basic: heck prediction and accuracies shape for _inner_loop"""
+        fix_random_seeds()
+        for _, task_batch in enumerate(
+                self.dataloader_train,
+                start=0
+        ):
+            for task in task_batch:
+                images_support, labels_support, images_query, labels_query = task
+                images_support = images_support
+                labels_support = labels_support
+                images_query = images_query
+                labels_query = labels_query
+                parameters, accuracies, _ = self.submission_maml._inner_loop(
+                    images_support,
+                    labels_support,
+                    train=True
                 )
                 self.assertTrue(parameters['conv0'].shape == torch.Size([32, 1, 3, 3]), "conv0 shape is incorrect")
                 self.assertTrue(parameters['b0'].shape == torch.Size([32]), "b0 shape is incorrect")
@@ -187,7 +233,7 @@ class Test_2b(GradedTestCase):
         ))
     
     @graded(timeout=60)
-    def test_0(self):
+    def test_1(self):
         """2b-0-basic: check shapes are correct for _outer_step"""
         fix_random_seeds()
         for i_step, task_batch in enumerate(

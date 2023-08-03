@@ -6,6 +6,10 @@ import os
 
 import numpy as np
 import torch
+
+import torch.multiprocessing
+torch.multiprocessing.set_sharing_strategy('file_system')
+
 from torch import nn
 import torch.nn.functional as F  # pylint: disable=unused-import
 from google_drive_downloader import GoogleDriveDownloader as gdd
@@ -80,7 +84,7 @@ class ProtoNetNetwork(nn.Module):
 class ProtoNet:
     """Trains and assesses a prototypical network."""
 
-    def __init__(self, learning_rate, log_dir, device):
+    def __init__(self, learning_rate, log_dir, device, compile=False, backend=None):
         """Inits ProtoNet.
 
         Args:
@@ -90,6 +94,14 @@ class ProtoNet:
         """
         self.device = device
         self._network = ProtoNetNetwork(device)
+
+        if(compile == True):
+            try:
+                self._network = torch.compile(self._network, backend=backend)
+                print(f"ProtoNetNetwork model compiled")
+            except Exception as err:
+                print(f"Model compile not supported: {err}")
+
         self._optimizer = torch.optim.Adam(
             self._network.parameters(),
             lr=learning_rate
@@ -267,11 +279,7 @@ def main(args):
     print(args)
 
     if args.device == "gpu" and torch.backends.mps.is_available() and torch.backends.mps.is_built():
-        # on MPS the operator aten::_unique2 is not implemented ... Waiting for PyTorch 2.0
-        # DEVICE = "mps"
-
-        # Due to the above, default for now to cpu
-        DEVICE = "cpu"
+        DEVICE = "mps"
     elif args.device == "gpu" and torch.cuda.is_available():
         DEVICE = "cuda"
     else:
@@ -285,7 +293,7 @@ def main(args):
     print(f'log_dir: {log_dir}')
     writer = tensorboard.SummaryWriter(log_dir=log_dir)
 
-    protonet = ProtoNet(args.learning_rate, log_dir, DEVICE)
+    protonet = ProtoNet(args.learning_rate, log_dir, DEVICE, args.compile, args.backend)
 
     if args.checkpoint_step > -1:
         protonet.load(args.checkpoint_step)
@@ -307,7 +315,8 @@ def main(args):
             args.num_way,
             args.num_support,
             args.num_query,
-            num_training_tasks
+            num_training_tasks,
+            args.num_workers
         )
         dataloader_val = omniglot.get_omniglot_dataloader(
             'val',
@@ -315,7 +324,8 @@ def main(args):
             args.num_way,
             args.num_support,
             args.num_query,
-            args.batch_size * 4
+            args.batch_size * 4,
+            args.num_workers,
         )
         protonet.train(
             dataloader_train,
@@ -335,7 +345,8 @@ def main(args):
             args.num_way,
             args.num_support,
             args.num_query,
-            NUM_TEST_TASKS
+            NUM_TEST_TASKS,
+            args.num_workers
         )
         protonet.test(dataloader_test)
 
@@ -361,6 +372,10 @@ if __name__ == '__main__':
     parser.add_argument('--checkpoint_step', type=int, default=-1,
                         help=('checkpoint iteration to load for resuming '
                               'training, or for evaluation (-1 is ignored)'))
+    parser.add_argument('--num_workers', type=int, default=2, 
+                        help=('needed to specify omniglot dataloader'))
+    parser.add_argument('--compile', action=argparse.BooleanOptionalAction)
+    parser.add_argument("--backend", type=str, default="inductor", choices=['inductor', 'aot_eager', 'cudagraphs'])
     parser.add_argument('--cache', action='store_true')
     parser.add_argument('--device', type=str, default='cpu')
 
