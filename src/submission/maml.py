@@ -6,6 +6,10 @@ import os
 
 import numpy as np
 import torch
+
+import torch.multiprocessing
+torch.multiprocessing.set_sharing_strategy('file_system')
+
 from torch import nn
 import torch.nn.functional as F
 from torch import autograd
@@ -167,6 +171,9 @@ class MAML:
             parameters (dict[str, Tensor]): adapted network parameters
             accuracies (list[float]): support set accuracy over the course of
                 the inner loop, length num_inner_steps + 1
+            gradients(list[float]): gradients computed from auto.grad, just needed
+                for autograders, no need to use this value in your code and feel to replace
+                with underscore       
         """
         accuracies = []
         parameters = {
@@ -175,7 +182,7 @@ class MAML:
         }
         ### START CODE HERE ###
         ### END CODE HERE ###
-        return parameters, accuracies
+        return parameters, accuracies, gradients
 
     def _outer_step(self, task_batch, train):
         """Computes the MAML loss and metrics on a batch of tasks.
@@ -381,7 +388,7 @@ def main(args):
     print(args)
 
     if args.device == "gpu" and torch.backends.mps.is_available() and torch.backends.mps.is_built():
-        # on MPS the derivative for aten::linear_backward is not implemented ... Waiting for PyTorch 2.0
+        # on MPS the derivative for aten::linear_backward is not implemented ... Waiting for PyTorch 2.1.0
         # DEVICE = "mps"
 
         # Due to the above, default for now to cpu
@@ -429,7 +436,8 @@ def main(args):
             args.num_way,
             args.num_support,
             args.num_query,
-            num_training_tasks
+            num_training_tasks,
+            args.num_workers
         )
         dataloader_val = omniglot.get_omniglot_dataloader(
             'val',
@@ -437,7 +445,8 @@ def main(args):
             args.num_way,
             args.num_support,
             args.num_query,
-            args.batch_size * 4
+            args.batch_size * 4,
+            args.num_workers
         )
         maml.train(
             dataloader_train,
@@ -457,7 +466,8 @@ def main(args):
             args.num_way,
             args.num_support,
             args.num_query,
-            NUM_TEST_TASKS
+            NUM_TEST_TASKS,
+            args.num_workers
         )
         maml.test(dataloader_test)
 
@@ -489,6 +499,8 @@ if __name__ == '__main__':
     parser.add_argument('--checkpoint_step', type=int, default=-1,
                         help=('checkpoint iteration to load for resuming '
                               'training, or for evaluation (-1 is ignored)'))
+    parser.add_argument('--num_workers', type=int, default=2, 
+                        help=('needed to specify omniglot dataloader'))
     parser.add_argument('--cache', action='store_true')
     parser.add_argument('--device', type=str, default='cpu')
 
