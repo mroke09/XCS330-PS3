@@ -142,7 +142,7 @@ class ProtoNet:
             np.mean(accuracy_query_batch)
         )
 
-    def train(self, dataloader_train, dataloader_val, writer):
+    def train(self, dataloader_train, dataloader_val, writer, args):
         """Train the ProtoNet.
 
         Consumes dataloader_train to optimize weights of ProtoNetNetwork
@@ -153,6 +153,7 @@ class ProtoNet:
             dataloader_train (DataLoader): loader for train tasks
             dataloader_val (DataLoader): loader for validation tasks
             writer (SummaryWriter): TensorBoard logger
+            args (dict): dictionary with all parameters
         """
         print(f'Starting training at iteration {self._start_train_step}.')
         for i_step, task_batch in enumerate(
@@ -193,29 +194,34 @@ class ProtoNet:
                         losses.append(loss.item())
                         accuracies_support.append(accuracy_support)
                         accuracies_query.append(accuracy_query)
-                    loss = np.mean(losses)
-                    accuracy_support = np.mean(accuracies_support)
-                    accuracy_query = np.mean(accuracies_query)
+                    val_loss = np.mean(losses)
+                    val_accuracy_support = np.mean(accuracies_support)
+                    val_accuracy_query = np.mean(accuracies_query)
                 print(
                     f'Validation: '
-                    f'loss: {loss:.3f}, '
-                    f'support accuracy: {accuracy_support:.3f}, '
-                    f'query accuracy: {accuracy_query:.3f}'
+                    f'loss: {val_loss:.3f}, '
+                    f'support accuracy: {val_accuracy_support:.3f}, '
+                    f'query accuracy: {val_accuracy_query:.3f}'
                 )
-                writer.add_scalar('loss/val', loss, i_step)
+                writer.add_scalar('loss/val', val_loss, i_step)
                 writer.add_scalar(
                     'val_accuracy/support',
-                    accuracy_support,
+                    val_accuracy_support,
                     i_step
                 )
                 writer.add_scalar(
                     'val_accuracy/query',
-                    accuracy_query,
+                    val_accuracy_query,
                     i_step
                 )
 
             if i_step % SAVE_INTERVAL == 0:
                 self._save(i_step)
+
+                with open(f'protonet_results_{args.num_support}_{args.num_way}.npy', 'wb') as f:
+                    np.save(f, val_loss)
+                    np.save(f, val_accuracy_support)
+                    np.save(f, val_accuracy_query)
 
     def test(self, dataloader_test):
         """Evaluate the ProtoNet on test tasks.
@@ -330,7 +336,8 @@ def main(args):
         protonet.train(
             dataloader_train,
             dataloader_val,
-            writer
+            writer,
+            args
         )
     else:
         print(

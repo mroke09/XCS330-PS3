@@ -218,7 +218,7 @@ class MAML:
         accuracy_query = np.mean(accuracy_query_batch)
         return outer_loss, accuracies_support, accuracy_query
 
-    def train(self, dataloader_train, dataloader_val, writer):
+    def train(self, dataloader_train, dataloader_val, writer, args):
         """Train the MAML.
 
         Consumes dataloader_train to optimize MAML meta-parameters
@@ -229,6 +229,7 @@ class MAML:
             dataloader_train (DataLoader): loader for train tasks
             dataloader_val (DataLoader): loader for validation tasks
             writer (SummaryWriter): TensorBoard logger
+            args (dict): dictionary with all parameters
         """
         print(f'Starting training at iteration {self._start_train_step}.')
         for i_step, task_batch in enumerate(
@@ -283,45 +284,51 @@ class MAML:
                     accuracies_pre_adapt_support.append(accuracies_support[0])
                     accuracies_post_adapt_support.append(accuracies_support[-1])
                     accuracies_post_adapt_query.append(accuracy_query)
-                loss = np.mean(losses)
-                accuracy_pre_adapt_support = np.mean(
+                val_loss = np.mean(losses)
+                val_accuracy_pre_adapt_support = np.mean(
                     accuracies_pre_adapt_support
                 )
-                accuracy_post_adapt_support = np.mean(
+                val_accuracy_post_adapt_support = np.mean(
                     accuracies_post_adapt_support
                 )
-                accuracy_post_adapt_query = np.mean(
+                val_accuracy_post_adapt_query = np.mean(
                     accuracies_post_adapt_query
                 )
                 print(
                     f'Validation: '
-                    f'loss: {loss:.3f}, '
+                    f'loss: {val_loss:.3f}, '
                     f'pre-adaptation support accuracy: '
-                    f'{accuracy_pre_adapt_support:.3f}, '
+                    f'{val_accuracy_pre_adapt_support:.3f}, '
                     f'post-adaptation support accuracy: '
-                    f'{accuracy_post_adapt_support:.3f}, '
+                    f'{val_accuracy_post_adapt_support:.3f}, '
                     f'post-adaptation query accuracy: '
-                    f'{accuracy_post_adapt_query:.3f}'
+                    f'{val_accuracy_post_adapt_query:.3f}'
                 )
-                writer.add_scalar('loss/val', loss, i_step)
+                writer.add_scalar('loss/val', val_loss, i_step)
                 writer.add_scalar(
                     'val_accuracy/pre_adapt_support',
-                    accuracy_pre_adapt_support,
+                    val_accuracy_pre_adapt_support,
                     i_step
                 )
                 writer.add_scalar(
                     'val_accuracy/post_adapt_support',
-                    accuracy_post_adapt_support,
+                    val_accuracy_post_adapt_support,
                     i_step
                 )
                 writer.add_scalar(
                     'val_accuracy/post_adapt_query',
-                    accuracy_post_adapt_query,
+                    val_accuracy_post_adapt_query,
                     i_step
                 )
 
             if i_step % SAVE_INTERVAL == 0:
                 self._save(i_step)
+
+                with open(f'maml_results_{args.num_support}_{args.num_way}_{args.num_inner_steps}_{args.inner_lr}_{args.learn_inner_lrs}.npy', 'wb') as f:
+                    np.save(f, val_loss)
+                    np.save(f, val_accuracy_pre_adapt_support)
+                    np.save(f, val_accuracy_post_adapt_support)
+                    np.save(f, val_accuracy_post_adapt_query)
 
     def test(self, dataloader_test):
         """Evaluate the MAML on test tasks.
@@ -388,11 +395,7 @@ def main(args):
     print(args)
 
     if args.device == "gpu" and torch.backends.mps.is_available() and torch.backends.mps.is_built():
-        # on MPS the derivative for aten::linear_backward is not implemented ... Waiting for PyTorch 2.1.0
-        # DEVICE = "mps"
-
-        # Due to the above, default for now to cpu
-        DEVICE = "cpu"
+        DEVICE = "mps"
     elif args.device == "gpu" and torch.cuda.is_available():
         DEVICE = "cuda"
     else:
@@ -451,7 +454,8 @@ def main(args):
         maml.train(
             dataloader_train,
             dataloader_val,
-            writer
+            writer,
+            args
         )
     else:
         print(

@@ -4,13 +4,15 @@ In the \texttt{protonet.py} file, complete the implementation of the \texttt{Pro
     
 Assess your implementation on 5-way 5-shot Omniglot. To do so, run 
 \begin{equation*} 
-    \texttt{python protonet.py} 
+    \texttt{python protonet.py --num\_support 5} 
 \end{equation*}
-with the appropriate command line arguments. These arguments have defaults specified in the file. To specify a non-default value for an argument, use the following syntax:
+
+Use 15 query examples per class per task. Depending on how much memory your GPU has, you may want to adjust the batch size. Do not adjust the learning rate from its default of $0.001$.
+
+To specify a non-default value for an argument, use the following syntax:
 \begin{equation*}
     \texttt{python protonet.py --argument1 value1 --argument2 value2}
 \end{equation*}
-Use 15 query examples per class per task. Depending on how much memory your GPU has, you may want to adjust the batch size. Do not adjust the learning rate from its default of $0.001$.
 
     As the model trains, model checkpoints and TensorBoard logs are periodically saved to a \texttt{log\_dir}. The default \texttt{log\_dir} is formatted from the arguments, but this can be overriden. You can visualize logged metrics by running
 \begin{equation*}
@@ -22,7 +24,6 @@ To resume training a model starting from a checkpoint at \texttt{\{some\_dir\}/s
 \begin{equation*}
     \texttt{python protonet.py --log\_dir some\_dir --checkpoint\_step some\_step}
 \end{equation*}
-If a run ended because it reached \texttt{num\_train\_iterations}, you may need to increase this parameter.
 
 Your plot of the validation query accuracy over the course of training should look like the figure below.
 \begin{center}
