@@ -4,8 +4,8 @@ sys.path.append('..')
 import argparse
 import os
 
-import numpy as np
 import torch
+import numpy as np
 
 import torch.multiprocessing
 torch.multiprocessing.set_sharing_strategy('file_system')
@@ -171,7 +171,7 @@ class MAML:
             parameters (dict[str, Tensor]): adapted network parameters
             accuracies (list[float]): support set accuracy over the course of
                 the inner loop, length num_inner_steps + 1
-            gradients(list[float]): gradients computed from auto.grad, just needed
+            gradients(list[float]): gradients of the last inner step computed from auto.grad, just needed
                 for autograders, no need to use this value in your code and feel to replace
                 with underscore       
         """
@@ -180,6 +180,15 @@ class MAML:
             k: torch.clone(v)
             for k, v in self._meta_parameters.items()
         }
+
+        # TODO: finish implementing this method.
+        # This method computes the inner loop (adaptation) procedure
+        # over the course of _num_inner_steps steps for one
+        # task. It also scores the model along the way.
+        # Make sure to populate accuracies and update parameters.
+        # Use F.cross_entropy to compute classification losses.
+        # Use util.score to compute accuracies.
+        # if train:
         ### START CODE HERE ###
         ### END CODE HERE ###
         return parameters, accuracies, gradients
@@ -208,6 +217,16 @@ class MAML:
             labels_support = labels_support.to(self.device)
             images_query = images_query.to(self.device)
             labels_query = labels_query.to(self.device)
+            # TODO: finish implementing this method.
+            # For a given task, use the _inner_loop method to adapt for
+            # _num_inner_steps steps, then compute the MAML loss and other
+            # metrics. Reminder you can replace gradients with _ when calling
+            # _inner_loop.
+            # Use F.cross_entropy to compute classification losses.
+            # Use util.score to compute accuracies.
+            # Make sure to populate outer_loss_batch, accuracies_support_batch,
+            # and accuracy_query_batch.
+            # support accuracy: The first element (index 0) should be the accuracy before any steps are taken.
             ### START CODE HERE ###
             ### END CODE HERE ###
         outer_loss = torch.mean(torch.stack(outer_loss_batch))
@@ -324,11 +343,40 @@ class MAML:
             if i_step % SAVE_INTERVAL == 0:
                 self._save(i_step)
 
+                prev_loss, prev_accuracy_pre_adapt_support, prev_accuracy_post_adapt_support, prev_accuracy_post_adapt_query = None, None, None, None
+
+                try:
+
+                    with open(f'maml_results_{args.num_support}_{args.num_way}_{args.num_inner_steps}_{args.inner_lr}_{args.learn_inner_lrs}.npy', 'rb') as f:
+                        prev_loss = np.load(f)
+                        prev_accuracy_pre_adapt_support = np.load(f)
+                        prev_accuracy_post_adapt_support = np.load(f)
+                        prev_accuracy_post_adapt_query = np.load(f)
+
+                except IOError:
+                    prev_loss = 100
+                    prev_accuracy_pre_adapt_support = 0
+                    prev_accuracy_post_adapt_support = 0
+                    prev_accuracy_post_adapt_query = 0
+
                 with open(f'maml_results_{args.num_support}_{args.num_way}_{args.num_inner_steps}_{args.inner_lr}_{args.learn_inner_lrs}.npy', 'wb') as f:
-                    np.save(f, val_loss)
-                    np.save(f, val_accuracy_pre_adapt_support)
-                    np.save(f, val_accuracy_post_adapt_support)
-                    np.save(f, val_accuracy_post_adapt_query)
+
+                    if val_loss <= prev_loss and \
+                        val_accuracy_pre_adapt_support >= prev_accuracy_pre_adapt_support and \
+                        val_accuracy_post_adapt_support >= prev_accuracy_post_adapt_support and \
+                        val_accuracy_post_adapt_query >= prev_accuracy_post_adapt_query:
+                            
+                        np.save(f, val_loss)
+                        np.save(f, val_accuracy_pre_adapt_support)
+                        np.save(f, val_accuracy_post_adapt_support)
+                        np.save(f, val_accuracy_post_adapt_query)
+                        
+                    else:
+                        np.save(f, prev_loss)
+                        np.save(f, prev_accuracy_pre_adapt_support)
+                        np.save(f, prev_accuracy_post_adapt_support)
+                        np.save(f, prev_accuracy_post_adapt_query)
+
 
     def test(self, dataloader_test):
         """Evaluate the MAML on test tasks.

@@ -4,8 +4,8 @@ sys.path.append('..')
 import argparse
 import os
 
-import numpy as np
 import torch
+import numpy as np
 
 import torch.multiprocessing
 torch.multiprocessing.set_sharing_strategy('file_system')
@@ -134,6 +134,13 @@ class ProtoNet:
             images_query = images_query.to(self.device)
             labels_query = labels_query.to(self.device)
 
+            # TODO: finish implementing this method.
+            # For a given task, compute the prototypes and the protonet loss.
+            # Use F.cross_entropy to compute classification losses.
+            # Use util.score to compute accuracies.
+            # Make sure to populate loss_batch, accuracy_support_batch, and
+            # accuracy_query_batch.
+
             ### START CODE HERE ###
             ### END CODE HERE ###
         return (
@@ -218,10 +225,32 @@ class ProtoNet:
             if i_step % SAVE_INTERVAL == 0:
                 self._save(i_step)
 
+                try:
+
+                    with open(f'protonet_results_{args.num_support}_{args.num_way}.npy', 'rb') as f:
+                        prev_loss = np.load(f)
+                        prev_val_accuracy_support = np.load(f)
+                        prev_val_accuracy_query = np.load(f)
+
+                except IOError:
+                    prev_loss = 100
+                    prev_val_accuracy_support = 0
+                    prev_val_accuracy_query = 0
+
                 with open(f'protonet_results_{args.num_support}_{args.num_way}.npy', 'wb') as f:
-                    np.save(f, val_loss)
-                    np.save(f, val_accuracy_support)
-                    np.save(f, val_accuracy_query)
+
+                    if val_loss <= prev_loss and \
+                        prev_val_accuracy_support != None and val_accuracy_support >= prev_val_accuracy_support and \
+                        prev_val_accuracy_query != None and val_accuracy_query >= prev_val_accuracy_query:
+
+                        np.save(f, val_loss)
+                        np.save(f, val_accuracy_support)
+                        np.save(f, val_accuracy_query)
+                    else:
+                        np.save(f, prev_loss)
+                        np.save(f, prev_val_accuracy_support)
+                        np.save(f, prev_val_accuracy_query)
+
 
     def test(self, dataloader_test):
         """Evaluate the ProtoNet on test tasks.
