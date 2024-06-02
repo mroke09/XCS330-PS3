@@ -388,7 +388,7 @@ class Test_2b(GradedTestCase):
 
     @graded(timeout=1, is_hidden=True)
     def test_5(self):
-        """2b-5-hidden:  Hidden test case for the MAML with 0.04 learning rate and 5 inner steps."""
+        """2b-5-hidden:  Hidden test case for the MAML with 0.4 learning rate and 5 inner steps."""
 
         # Load the file containing both labels and predictions
         with open(f'submission/maml_results_1_5_1_0.4_True.npy', 'rb') as f:
