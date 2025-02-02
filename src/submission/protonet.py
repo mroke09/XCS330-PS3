@@ -12,7 +12,7 @@ torch.multiprocessing.set_sharing_strategy('file_system')
 
 from torch import nn
 import torch.nn.functional as F  # pylint: disable=unused-import
-from google_drive_downloader import GoogleDriveDownloader as gdd
+from googledrivedownloader import download_file_from_google_drive
 from torch.utils import tensorboard
 
 import omniglot
@@ -420,7 +420,7 @@ if __name__ == '__main__':
     if args.cache == True:
         # Download Omniglot Dataset
         if not os.path.isdir("./omniglot_resized"):
-            gdd.download_file_from_google_drive(
+            download_file_from_google_drive(
                 file_id="1iaSFXIYC3AB8q9K_M-oVMa4pmB7yKMtI",
                 dest_path="./omniglot_resized.zip",
                 unzip=True,
