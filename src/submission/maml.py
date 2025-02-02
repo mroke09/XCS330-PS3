@@ -14,7 +14,7 @@ from torch import nn
 import torch.nn.functional as F
 from torch import autograd
 from torch.utils import tensorboard
-from google_drive_downloader import GoogleDriveDownloader as gdd
+from googledrivedownloader import download_file_from_google_drive
 
 import omniglot
 import util
@@ -188,7 +188,6 @@ class MAML:
         # Make sure to populate accuracies and update parameters.
         # Use F.cross_entropy to compute classification losses.
         # Use util.score to compute accuracies.
-        # if train:
         ### START CODE HERE ###
         ### END CODE HERE ###
         return parameters, accuracies, gradients
@@ -561,7 +560,7 @@ if __name__ == '__main__':
     if args.cache == True:
         # Download Omniglot Dataset
         if not os.path.isdir("./omniglot_resized"):
-            gdd.download_file_from_google_drive(
+            download_file_from_google_drive(
                 file_id="1iaSFXIYC3AB8q9K_M-oVMa4pmB7yKMtI",
                 dest_path="./omniglot_resized.zip",
                 unzip=True,

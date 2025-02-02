@@ -9,7 +9,7 @@ import numpy as np
 import torch
 import torch.nn as nn
 import omniglot
-from google_drive_downloader import GoogleDriveDownloader as gdd
+from googledrivedownloader import download_file_from_google_drive
 
 # Import submission
 import submission
@@ -47,7 +47,7 @@ def check_omniglot():
     Check if Omniglot dataset is available.
     """
     if not os.path.isdir("./omniglot_resized"):
-        gdd.download_file_from_google_drive(
+        download_file_from_google_drive(
             file_id="1iaSFXIYC3AB8q9K_M-oVMa4pmB7yKMtI",
             dest_path="./omniglot_resized.zip",
             unzip=True,
@@ -141,7 +141,7 @@ class Test_1b(GradedTestCase):
 
         ### BEGIN_HIDE ###
         ### END_HIDE ###
-    
+
 
 class Test_2a(GradedTestCase):
     def setUp(self):
