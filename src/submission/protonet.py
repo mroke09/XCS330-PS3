@@ -142,6 +142,27 @@ class ProtoNet:
             # accuracy_query_batch.
 
             ### START CODE HERE ###
+
+            emb_support = self._network(images_support)
+            emb_query = self._network(images_query)
+
+            num_class = labels_support.max().item() + 1
+
+            prototypes = torch.stack([
+                emb_support[labels_support == n].mean(dim=0) for n in range(num_class)
+            ])
+
+            query_logits = -torch.cdist(emb_query, prototypes)
+            support_logits = -torch.cdist(emb_support, prototypes)
+
+            loss = F.cross_entropy(query_logits, labels_query)
+            accuracy_support = util.score(support_logits, labels_support)
+            accuracy_query = util.score(query_logits, labels_query)
+
+            loss_batch.append(loss)
+            accuracy_support_batch.append(accuracy_support)
+            accuracy_query_batch.append(accuracy_query)
+
             ### END CODE HERE ###
         return (
             torch.mean(torch.stack(loss_batch)),

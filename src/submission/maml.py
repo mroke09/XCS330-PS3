@@ -189,6 +189,21 @@ class MAML:
         # Use F.cross_entropy to compute classification losses.
         # Use util.score to compute accuracies.
         ### START CODE HERE ###
+        logits = self._forward(images, parameters)
+        accuracies.append(util.score(logits, labels))
+
+        for step in range(self._num_inner_steps):
+            logits = self._forward(images, parameters)
+            loss = F.cross_entropy(logits, labels)
+
+            gradients = torch.autograd.grad(loss, parameters.values(), create_graph=train)
+            parameters = {
+                k: v - self._inner_lrs[k] * g for (k, v), g in zip(parameters.items(), gradients)
+            }
+
+            logits = self._forward(images, parameters)
+            accuracies.append(util.score(logits, labels))
+
         ### END CODE HERE ###
         return parameters, accuracies, gradients
 
@@ -227,6 +242,16 @@ class MAML:
             # and accuracy_query_batch.
             # support accuracy: The first element (index 0) should be the accuracy before any steps are taken.
             ### START CODE HERE ###
+
+            params, acc_support, _ = self._inner_loop(images_support, labels_support, train)
+            logits_query = self._forward(images_query, params)
+            loss_query = F.cross_entropy(logits_query, labels_query)
+            acc_query = util.score(logits_query, labels_query)
+
+            outer_loss_batch.append(loss_query)
+            accuracies_support_batch.append(acc_support)
+            accuracy_query_batch.append(acc_query)
+
             ### END CODE HERE ###
         outer_loss = torch.mean(torch.stack(outer_loss_batch))
         accuracies_support = np.mean(
